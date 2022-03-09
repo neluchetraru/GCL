@@ -1,0 +1,55 @@
+{
+module GCLLexer
+open FSharp.Text.Lexing
+open System
+open GCLParser
+System.Globalization.CultureInfo.CurrentCulture <- new System.Globalization.CultureInfo("en-US")
+}
+
+// We define macros for some regular expressions we will use later
+let digit       = ['0'-'9']
+let num         = digit+
+let whitespace  = [' ' '\t']
+let char        = ['a'-'z' 'A'-'Z']
+let newline     = "\n\r" | '\n' | '\r'
+let variable    = (char(char|digit|'_')*)
+
+
+// Specify all existing tokens
+rule tokenize = parse
+| whitespace    { tokenize lexbuf }
+| newline       { lexbuf.EndPos <- lexbuf.EndPos.NextLine; tokenize lexbuf; }
+| "if"          { IF }
+| "fi"          { ENDIF }
+| "do"       { DO }
+| "od"          { ENDDO }
+| "skip"        { SKIP }
+| "false"        { FF } 
+| "true"           { TT }
+| ":="          { ASSGN }
+| variable      { let str = LexBuffer<_>.LexemeString lexbuf in VARNAME(str) }
+| num           { NUM(Int32.Parse(LexBuffer<_>.LexemeString lexbuf)) }
+| '*'           { TIMES }
+| '/'           { DIV }
+| '+'           { PLUS }
+| '-'           { MINUS }
+| '^'           { POW }
+| '('           { LPAR }
+| ')'           { RPAR }
+| ']'           { SRB }
+| '['           { SLB }
+| "[]"          { COMPOSE }
+| ';'           { SEMICOLON }
+| '&'           { UAND}
+| '|'           { UOR }
+| "&&"          { AND }
+| "||"          { OR  }
+| '!'           { NOT }
+| '='           { EQ }
+| "!="          { NEQ }
+| '>'           { GT }
+| ">="          { GTE }
+| '<'           { LT }
+| "<="          { LTE }
+| "->"          { ARROW }
+| eof           { EOF }
