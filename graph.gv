@@ -1,0 +1,14 @@
+digraph program_graph {rankdir=LR;
+node [shape = circle]; q▷;
+node [shape = doublecircle]; q◀;
+node [shape = circle]
+q1 -> q2 [label = "j:=0"];
+q2 -> q◀ [label = "!(i < n & j = m | i < j) && !(j < m & i = n | !(i < j))"];
+q2 -> q3 [label = "i < n & j = m | i < j"];
+q2 -> q4 [label = "j < m & i = n | !(i < j)"];
+q3 -> q4 [label = "A[i]:=A[i]+27"];
+q4 -> q5 [label = "B[j]:=B[j]+12"];
+q4 -> q2 [label = "i:=i+1"];
+q5 -> q2 [label = "j:=j+1"];
+q▷ -> q1 [label = "i:=0"];
+}
