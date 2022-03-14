@@ -169,32 +169,37 @@ let rec beautifyCommand =
 
 // create graph
 
-let rec edges initial final s i =
+let rec edges initial final i =
     function
     | ASSIGN (x, y) as c -> Set.singleton ((initial, beautifyCommand c, final))
     | ArrayAT (x, y, z) as c -> Set.singleton ((initial, beautifyCommand c, final))
     | Skip as c -> Set.singleton ((initial, beautifyCommand c, final))
     | Compose (x, y) ->
         let new_q = "q" + string (i + 1)
-        let E1 = edges initial new_q s (i + 1) x
-        let E2 = edges new_q final s (i + 1) y
+        let E1 = edges initial new_q (i + 1) x
+        let E2 = edges new_q final (i + 1) y
         Set.fold (fun acc el -> Set.add el acc) E2 E1
-    | If x -> edges_GC initial final s (i) x
+    | If x -> edges_GC initial final (i) x
     | Do x ->
         let b = beautifyBExpr (doneGC x)
-        let E = edges_GC initial initial s (i) x
+        let E = edges_GC initial initial (i) x
         Set.add (initial, b, final) E
 
-and edges_GC initial final s i =
+and edges_GC initial final i =
     function
+    | ExecuteGC (x, y) ->
+        let E1 = edges_GC initial final (i) x
+
+        let E2 = edges_GC initial final (i + 1) y
+
+        Set.fold (fun acc el -> Set.add el acc) E2 E1
     | ExecuteIf (x, y) ->
         let new_q = "q" + string (i + 1)
-        let E = edges new_q final s (i + 1) y
+
+        let E = edges new_q final (i + 1) y
+
         Set.add (initial, beautifyBExpr x, new_q) E
-    | ExecuteGC (x, y) ->
-        let E1 = edges_GC initial final s (i) x
-        let E2 = edges_GC initial final s (i + 1) y
-        Set.fold (fun acc el -> Set.add el acc) E2 E1
+
 
 
 let rec edges_d initial final s i command =
@@ -227,17 +232,16 @@ and edges_GC_d initial final s i command d =
             E,
          (UORExpr(x, d)))
     | ExecuteGC (x, y) ->
-        let (E1, d1) = edges_GC_d initial final s (i + 1) x d
-        let (E2, d2) = edges_GC_d initial final s (i + 1) y d
+        let (E1, d1) = edges_GC_d initial final s (i) x d
+        let (E2, d2) = edges_GC_d initial final s (i + 1) y d1
         (Set.fold (fun acc el -> Set.add el acc) E1 E2, d2)
 
 
 
 let get_edges c =
     function
-    | false -> edges "q▷" "q◀" Set.empty 0 c
+    | false -> edges "q▷" "q◀" 0 c
     | true -> edges_d "q▷" "q◀" Set.empty 0 c
-
 
 let convert edge =
 
