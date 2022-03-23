@@ -1,0 +1,47 @@
+{
+    module MemoryLexer
+    open FSharp.Text.Lexing
+    open System
+    open MemoryParser
+    System.Globalization.CultureInfo.CurrentCulture <- new System.Globalization.CultureInfo("en-US")
+}
+
+
+let digit       = ['0'-'9']
+let num         = digit+
+let whitespace  = [' ' '\t']
+let char        = ['a'-'z' 'A'-'Z']
+let newline     = "\n\r" | '\n' | '\r'
+let variable    = (char(char|digit|'_')*)
+
+
+rule tokenize = parse 
+    | whitespace        { tokenize lexbuf }
+    | newline           { lexbuf.EndPose <- lexbuf.EndPos.NextLine; tokenize lexbuf; }
+    | variable          { LexBuffer<_>.LexemeString lexbuf in VARNAME(str) }
+    | num               { NUM(Int32.Parse(LexBuffer<_>.LexemeString lexbuf)) }
+    | '*'               { TIMES }
+    | '/'               { DIV }
+    | '+'               { PLUS }
+    | '-'               { MINUS }
+    | '^'               { POW }
+    | '('               { LPAR }
+    | ')'               { RPAR }
+    | ']'               { SRB }
+    | '['               { SLB }
+    | '&'           { UAND}
+    | '|'           { UOR }
+    | "&&"          { AND }
+    | "||"          { OR  }
+    | '!'           { NOT }
+    | '='           { EQ }
+    | "!="          { NEQ }
+    | '>'           { GT }
+    | ">="          { GTE }
+    | '<'           { LT }
+    | "<="          { LTE }
+    | "false"        { FF } 
+    | "true"           { TT }
+    | ":="          { ASSGN }
+    | ","           { COMMA }
+    

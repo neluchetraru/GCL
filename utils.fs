@@ -1,27 +1,4 @@
-#r "FsLexYacc.Runtime.10.0.0/lib/net46/FsLexYacc.Runtime.dll"
-
-open FSharp.Text.Lexing
-open System.IO
-
-open System
-
-#load "GCLTypesAST.fs"
-open GCLTypesAST
-#load "GCLParser.fs"
-open GCLParser
-#load "GCLLexer.fs"
-open GCLLexer
-
-type Act =
-    | B of bexpr
-    | C of command
-
-
-// function to parse a string according to the generated parser
-let parse input =
-    let lexbuf = LexBuffer<char>.FromString input
-    let res = GCLParser.start GCLLexer.tokenize lexbuf
-    res
+module Utils
 
 let rec pow (a, b) =
     match b with
@@ -31,7 +8,7 @@ let rec pow (a, b) =
 
 let convert edge =
     match edge with
-    | (node_in, label, node_out, act) ->
+    | (node_in, label, node_out, act: Act) ->
         node_in
         + " -> "
         + node_out
@@ -165,10 +142,12 @@ let rec beautifyCommand =
         + "]:="
         + beautifyAExpr z
     | Skip -> "skip"
-    | _ -> failwith "error"
 
 
 //
+type Act =
+    | B of bexpr
+    | C of command
 
 
 
@@ -245,192 +224,41 @@ and edges_GC_d initial final i command d =
 
 
 // Semantics
-let stack = Map.empty
 
-let rec semA e (stack: Map<string, int>) =
+
+let rec semA e =
     match e with
     | Num (x) -> x
-    | VAR (name) ->
-        match stack.TryFind name with
-        | Some x -> x
-        | None -> failwith " "
+    // | VAR (name) -> 1
     // | Array (name, x) ->
-    | TimesExpr (x, y) -> semA (x) stack * semA (y) stack
-    | DivExpr (x, y) -> semA (x) stack / semA (y) stack
-    | PlusExpr (x, y) -> semA (x) stack + semA (y) stack
-    | MinusExpr (x, y) -> semA (x) stack - semA (y) stack
-    | PowExpr (x, y) -> pow (semA (x) stack, semA (y) stack)
-    | UPlusExpr (x) -> semA (x) stack
-    | UMinusExpr (x) -> -semA (x) stack
+    | TimesExpr (x, y) -> semA (x) * semA (y)
+    | DivExpr (x, y) -> semA (x) / semA (y)
+    | PlusExpr (x, y) -> semA (x) + semA (y)
+    | MinusExpr (x, y) -> semA (x) - semA (y)
+    | PowExpr (x, y) -> pow (semA (x), semA (y))
+    | UPlusExpr (x) -> semA (x)
+    | UMinusExpr (x) -> - semA(x)
 
-let rec semB e (stack: Map<string, int>) =
+let rec semB e =
     match e with
     | T -> true
     | F -> false
     | UANDExpr (x, y) ->
-        if (semB (x) stack) then
-            (semB (x) stack && semB (y) stack)
+        if (semB (x)) then
+            (semB (x) && semB (y))
         else
             false
     | UORExpr (x, y) ->
-        if (semB (x) stack) then
+        if (semB (x)) then
             true
         else
-            (semB (x) stack || semB (y) stack)
-    | ANDExpr (x, y) -> semB (x) stack && semB (y) stack
-    | ORExpr (x, y) -> semB (x) stack || semB (y) stack
-    | NOTExpr (x) -> not (semB (x) stack)
-    | EQExpr (x, y) -> semA (x) stack = semA (y) stack
-    | NEQExpr (x, y) -> semA (x) stack <> semA (y) stack
-    | GTExpr (x, y) -> semA (x) stack > semA (y) stack
-    | GTEExpr (x, y) -> semA (x) stack >= semA (y) stack
-    | LTExpr (x, y) -> semA (x) stack < semA (y) stack
-    | LTEqExpr (x, y) -> semA (x) stack <= semA (y) stack
-
-
-let Sem act stack =
-    match act with
-    | B x ->
-        if (semB x stack) then
-            stack
-        else
-            failwith "stuck"
-    | C x ->
-        match x with
-        | Assign (x, y) -> stack.Add(x, semA y stack)
-//
-// Compile n programs
-let compile' () =
-    Console.WriteLine("The program to parse must be in \"program.txt\" file. Press Enter to continue")
-
-    while (Console.ReadKey().Key <> ConsoleKey.Enter) do
-        ()
-
-    let program = File.ReadAllText("program.txt")
-    let e = parse (program)
-    e
-
-
-let compile () =
-    try
-        printfn "OK, AST: %s" (printCommand (compile' ()))
-    with
-    | err -> printfn "Compilation error."
-
-
-let get_edges (c: command) =
-    function
-    | true ->
-        let E, last = edges_d "q▷" "q◀" 1 c
-        E
-    | false ->
-        let E, last = edges "q▷" "q◀" 1 c
-        E
-
-let rec graphviz c =
-    Console.WriteLine("[1] Non-deterministic")
-    Console.WriteLine("[2] Deterministic")
-    let choice = Console.ReadLine()
-
-    File.WriteAllText(
-        "graph.gv",
-        "digraph program_graph {rankdir=LR;
-node [shape = circle]; q▷;
-node [shape = doublecircle]; q◀;
-node [shape = circle]\n"
-    )
-
-
-    match choice with
-    | "1" -> File.AppendAllText("graph.gv", Set.fold (fun acc edge -> acc + convert edge) "" (get_edges c false))
-    | "2" -> File.AppendAllText("graph.gv", Set.fold (fun acc edge -> acc + convert edge) "" (get_edges c true))
-    | _ ->
-        File.WriteAllText("graph.gv", "")
-        Console.WriteLine("Wrong option. Try again")
-
-    if (File.ReadAllText("graph.gv") <> "") then
-        File.AppendAllText("graph.gv", "}")
-        printfn "PG was saved in \"graph.gv\" file."
-
-
-
-let rec iterate PG node stack =
-    if node = "q◀" then
-        stack
-    else
-        let available =
-            Set.fold
-                (fun acc el ->
-                    match el with
-                    | (q0, _, qf, act) -> if q0 = node then el :: acc else acc)
-                []
-                PG
-
-        if (List.length available = 1) then // Deterministic
-            let (_, _, qf, act) = available.[0]
-
-            iterate PG qf (Sem act stack)
-        else
-            failwith "Non-determinism"
-
-// let res =
-//     Set.toList (
-//         Set.fold
-//             (fun acc el ->
-//                 match el with
-//                 | (q0, _, qf, act) ->
-//                     match act with
-//                     | B x ->
-//                         if (semB x = true) then
-//                             Set.add el acc
-//                         else
-//                             acc
-//                     | Assign _ -> Set.add el acc
-//                     | SKIP -> Set.add el acc
-//                     | AssignArray _ -> Set.add el acc)
-//             Set.empty
-//             available
-//     )
-
-
-// let qf =
-//     match res with
-//     | (_, _, q, _) :: [] -> q
-//     | (_, _, q, _) :: xs -> failwith "err"
-
-// ()
-
-// // q▷
-
-
-let menu () =
-    Console.WriteLine("Choose a desired option from the menu:")
-    Console.WriteLine("[1] Parse a GCL program")
-    Console.WriteLine("[2] Compile a GCL program into a PG")
-    Console.WriteLine("[3] Execute a program")
-    Console.WriteLine("[q] Quit")
-    let choice = Console.ReadLine()
-    choice
-
-let rec main () =
-    let option = menu ()
-
-    match option with
-    | "1" ->
-        compile ()
-        main ()
-    | "2" ->
-        try
-            graphviz (compile' ())
-            main ()
-        with
-        | err ->
-            printfn "Compilation error"
-            main ()
-    // | "3" -> execute (get_edges (compile' ()) false) "q▷" stack // CHANGFE
-    | "q" -> ()
-    | _ ->
-        printfn "Please choose a correct option."
-        main ()
-
-main ()
+            (semB (x) || semB (y))
+    | ANDExpr (x, y) -> semB (x) && semB (y)
+    | ORExpr (x, y) -> semB (x) || semB (y)
+    | NOTExpr (x) -> not (semB (x))
+    | EQExpr (x, y) -> semA (x) = semA (y)
+    | NEQExpr (x, y) -> semA (x) <> semA (y)
+    | GTExpr (x, y) -> semA (x) > semA (y)
+    | GTEExpr (x, y) -> semA (x) >= semA (y)
+    | LTExpr (x, y) -> semA (x) < semA (y)
+    | LTEqExpr (x, y) -> semA (x) <= semA (y)

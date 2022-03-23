@@ -1,5 +1,7 @@
 module GCLTypesAST
 
+
+
 type aexpr =
     | VAR of string
     | Num of int
@@ -30,12 +32,12 @@ type bexpr =
 
 
 type command =
-    | ASSIGN of (string * aexpr)
-    | ArrayAT of (string * aexpr * aexpr)
+    | Assign of (string * aexpr)
+    | AssignAt of (string * aexpr * aexpr)
     | Skip
-    | Compose of (command * command)
     | If of gCommand
     | Do of gCommand
+    | Compose of (command * command)
 
 and gCommand =
     | ExecuteIf of (bexpr * command)

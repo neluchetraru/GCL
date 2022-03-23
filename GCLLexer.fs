@@ -1,4 +1,4 @@
-# 1 ".\GCLLexer.fsl"
+# 1 "GCLLexer.fsl"
  
 module GCLLexer
 open FSharp.Text.Lexing
@@ -6,7 +6,7 @@ open System
 open GCLParser
 System.Globalization.CultureInfo.CurrentCulture <- new System.Globalization.CultureInfo("en-US")
 
-# 9 ".\GCLLexer.fs"
+# 9 "GCLLexer.fs"
 let trans : uint16[] array = 
     [| 
     (* State 0 *)
@@ -125,185 +125,185 @@ let rec _fslex_dummy () = _fslex_dummy()
 and tokenize  lexbuf =
   match _fslex_tables.Interpret(0,lexbuf) with
   | 0 -> ( 
-# 21 ".\GCLLexer.fsl"
+# 20 "GCLLexer.fsl"
                                  tokenize lexbuf 
-# 130 ".\GCLLexer.fs"
+# 130 "GCLLexer.fs"
           )
   | 1 -> ( 
-# 22 ".\GCLLexer.fsl"
+# 21 "GCLLexer.fsl"
                                  lexbuf.EndPos <- lexbuf.EndPos.NextLine; tokenize lexbuf; 
-# 135 ".\GCLLexer.fs"
+# 135 "GCLLexer.fs"
           )
   | 2 -> ( 
-# 23 ".\GCLLexer.fsl"
+# 22 "GCLLexer.fsl"
                                  IF 
-# 140 ".\GCLLexer.fs"
+# 140 "GCLLexer.fs"
           )
   | 3 -> ( 
-# 24 ".\GCLLexer.fsl"
+# 23 "GCLLexer.fsl"
                                  ENDIF 
-# 145 ".\GCLLexer.fs"
+# 145 "GCLLexer.fs"
           )
   | 4 -> ( 
-# 25 ".\GCLLexer.fsl"
+# 24 "GCLLexer.fsl"
                               DO 
-# 150 ".\GCLLexer.fs"
+# 150 "GCLLexer.fs"
           )
   | 5 -> ( 
-# 26 ".\GCLLexer.fsl"
+# 25 "GCLLexer.fsl"
                                  ENDDO 
-# 155 ".\GCLLexer.fs"
+# 155 "GCLLexer.fs"
           )
   | 6 -> ( 
-# 27 ".\GCLLexer.fsl"
+# 26 "GCLLexer.fsl"
                                  SKIP 
-# 160 ".\GCLLexer.fs"
+# 160 "GCLLexer.fs"
           )
   | 7 -> ( 
-# 28 ".\GCLLexer.fsl"
+# 27 "GCLLexer.fsl"
                                   FF 
-# 165 ".\GCLLexer.fs"
+# 165 "GCLLexer.fs"
           )
   | 8 -> ( 
-# 29 ".\GCLLexer.fsl"
+# 28 "GCLLexer.fsl"
                                     TT 
-# 170 ".\GCLLexer.fs"
+# 170 "GCLLexer.fs"
           )
   | 9 -> ( 
-# 30 ".\GCLLexer.fsl"
+# 29 "GCLLexer.fsl"
                                  ASSGN 
-# 175 ".\GCLLexer.fs"
+# 175 "GCLLexer.fs"
           )
   | 10 -> ( 
-# 31 ".\GCLLexer.fsl"
+# 30 "GCLLexer.fsl"
                                  let str = LexBuffer<_>.LexemeString lexbuf in VARNAME(str) 
-# 180 ".\GCLLexer.fs"
+# 180 "GCLLexer.fs"
           )
   | 11 -> ( 
-# 32 ".\GCLLexer.fsl"
+# 31 "GCLLexer.fsl"
                                  NUM(Int32.Parse(LexBuffer<_>.LexemeString lexbuf)) 
-# 185 ".\GCLLexer.fs"
+# 185 "GCLLexer.fs"
           )
   | 12 -> ( 
-# 33 ".\GCLLexer.fsl"
+# 32 "GCLLexer.fsl"
                                  TIMES 
-# 190 ".\GCLLexer.fs"
+# 190 "GCLLexer.fs"
           )
   | 13 -> ( 
-# 34 ".\GCLLexer.fsl"
+# 33 "GCLLexer.fsl"
                                  DIV 
-# 195 ".\GCLLexer.fs"
+# 195 "GCLLexer.fs"
           )
   | 14 -> ( 
-# 35 ".\GCLLexer.fsl"
+# 34 "GCLLexer.fsl"
                                  PLUS 
-# 200 ".\GCLLexer.fs"
+# 200 "GCLLexer.fs"
           )
   | 15 -> ( 
-# 36 ".\GCLLexer.fsl"
+# 35 "GCLLexer.fsl"
                                  MINUS 
-# 205 ".\GCLLexer.fs"
+# 205 "GCLLexer.fs"
           )
   | 16 -> ( 
-# 37 ".\GCLLexer.fsl"
+# 36 "GCLLexer.fsl"
                                  POW 
-# 210 ".\GCLLexer.fs"
+# 210 "GCLLexer.fs"
           )
   | 17 -> ( 
-# 38 ".\GCLLexer.fsl"
+# 37 "GCLLexer.fsl"
                                  LPAR 
-# 215 ".\GCLLexer.fs"
+# 215 "GCLLexer.fs"
           )
   | 18 -> ( 
-# 39 ".\GCLLexer.fsl"
+# 38 "GCLLexer.fsl"
                                  RPAR 
-# 220 ".\GCLLexer.fs"
+# 220 "GCLLexer.fs"
           )
   | 19 -> ( 
-# 40 ".\GCLLexer.fsl"
+# 39 "GCLLexer.fsl"
                                  SRB 
-# 225 ".\GCLLexer.fs"
+# 225 "GCLLexer.fs"
           )
   | 20 -> ( 
-# 41 ".\GCLLexer.fsl"
+# 40 "GCLLexer.fsl"
                                  SLB 
-# 230 ".\GCLLexer.fs"
+# 230 "GCLLexer.fs"
           )
   | 21 -> ( 
-# 42 ".\GCLLexer.fsl"
+# 41 "GCLLexer.fsl"
                                  COMPOSE 
-# 235 ".\GCLLexer.fs"
+# 235 "GCLLexer.fs"
           )
   | 22 -> ( 
-# 43 ".\GCLLexer.fsl"
+# 42 "GCLLexer.fsl"
                                  SEMICOLON 
-# 240 ".\GCLLexer.fs"
+# 240 "GCLLexer.fs"
           )
   | 23 -> ( 
-# 44 ".\GCLLexer.fsl"
+# 43 "GCLLexer.fsl"
                                  UAND
-# 245 ".\GCLLexer.fs"
+# 245 "GCLLexer.fs"
           )
   | 24 -> ( 
-# 45 ".\GCLLexer.fsl"
+# 44 "GCLLexer.fsl"
                                  UOR 
-# 250 ".\GCLLexer.fs"
+# 250 "GCLLexer.fs"
           )
   | 25 -> ( 
-# 46 ".\GCLLexer.fsl"
+# 45 "GCLLexer.fsl"
                                  AND 
-# 255 ".\GCLLexer.fs"
+# 255 "GCLLexer.fs"
           )
   | 26 -> ( 
-# 47 ".\GCLLexer.fsl"
+# 46 "GCLLexer.fsl"
                                  OR  
-# 260 ".\GCLLexer.fs"
+# 260 "GCLLexer.fs"
           )
   | 27 -> ( 
-# 48 ".\GCLLexer.fsl"
+# 47 "GCLLexer.fsl"
                                  NOT 
-# 265 ".\GCLLexer.fs"
+# 265 "GCLLexer.fs"
           )
   | 28 -> ( 
-# 49 ".\GCLLexer.fsl"
+# 48 "GCLLexer.fsl"
                                  EQ 
-# 270 ".\GCLLexer.fs"
+# 270 "GCLLexer.fs"
           )
   | 29 -> ( 
-# 50 ".\GCLLexer.fsl"
+# 49 "GCLLexer.fsl"
                                  NEQ 
-# 275 ".\GCLLexer.fs"
+# 275 "GCLLexer.fs"
           )
   | 30 -> ( 
-# 51 ".\GCLLexer.fsl"
+# 50 "GCLLexer.fsl"
                                  GT 
-# 280 ".\GCLLexer.fs"
+# 280 "GCLLexer.fs"
           )
   | 31 -> ( 
-# 52 ".\GCLLexer.fsl"
+# 51 "GCLLexer.fsl"
                                  GTE 
-# 285 ".\GCLLexer.fs"
+# 285 "GCLLexer.fs"
           )
   | 32 -> ( 
-# 53 ".\GCLLexer.fsl"
+# 52 "GCLLexer.fsl"
                                  LT 
-# 290 ".\GCLLexer.fs"
+# 290 "GCLLexer.fs"
           )
   | 33 -> ( 
-# 54 ".\GCLLexer.fsl"
+# 53 "GCLLexer.fsl"
                                  LTE 
-# 295 ".\GCLLexer.fs"
+# 295 "GCLLexer.fs"
           )
   | 34 -> ( 
-# 55 ".\GCLLexer.fsl"
+# 54 "GCLLexer.fsl"
                                  ARROW 
-# 300 ".\GCLLexer.fs"
+# 300 "GCLLexer.fs"
           )
   | 35 -> ( 
-# 56 ".\GCLLexer.fsl"
+# 55 "GCLLexer.fsl"
                                  EOF 
-# 305 ".\GCLLexer.fs"
+# 305 "GCLLexer.fs"
           )
   | _ -> failwith "tokenize"
 
-# 3000000 ".\GCLLexer.fs"
+# 3000000 "GCLLexer.fs"
