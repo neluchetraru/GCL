@@ -2,6 +2,8 @@ digraph program_graph {rankdir=LR;
 node [shape = circle]; q▷;
 node [shape = doublecircle]; q◀;
 node [shape = circle]
-q1 -> q◀ [label = "x:=0"];
-q▷ -> q1 [label = "i:=0"];
+q1 -> q◀ [label = "z:=x"];
+q2 -> q◀ [label = "z:=y"];
+q▷ -> q1 [label = "x >= y"];
+q▷ -> q2 [label = "y > x"];
 }

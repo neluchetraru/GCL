@@ -245,59 +245,118 @@ and edges_GC_d initial final i command d =
 
 
 // Semantics
-let stack = Map.empty
+let stack_var = Map.empty.Add("x", 10).Add("y", 0)
 
-let rec semA e (stack: Map<string, int>) =
+let stack_list = Map.empty
+
+type State =
+    | Stuck of string
+    | Success of string
+
+let rec semA e (stack_var: Map<string, int>) (stack_list: Map<string, int list>) =
     match e with
     | Num (x) -> x
     | VAR (name) ->
-        match stack.TryFind name with
+        match stack_var.TryFind name with
         | Some x -> x
         | None -> failwith " "
-    // | Array (name, x) ->
-    | TimesExpr (x, y) -> semA (x) stack * semA (y) stack
-    | DivExpr (x, y) -> semA (x) stack / semA (y) stack
-    | PlusExpr (x, y) -> semA (x) stack + semA (y) stack
-    | MinusExpr (x, y) -> semA (x) stack - semA (y) stack
-    | PowExpr (x, y) -> pow (semA (x) stack, semA (y) stack)
-    | UPlusExpr (x) -> semA (x) stack
-    | UMinusExpr (x) -> -semA (x) stack
+    | Array (name, x) ->
+        match stack_list.TryFind name with
+        | Some arr ->
+            try
+                arr.[semA x stack_var stack_list]
+            with
+            | e -> failwith "Stuck: index out of bounds"
+        | None -> failwith "Stuck: list not defined"
+    | TimesExpr (x, y) ->
+        semA (x) stack_var stack_list
+        * semA (y) stack_var stack_list
+    | DivExpr (x, y) ->
+        semA (x) stack_var stack_list
+        / semA (y) stack_var stack_list
+    | PlusExpr (x, y) ->
+        semA (x) stack_var stack_list
+        + semA (y) stack_var stack_list
+    | MinusExpr (x, y) ->
+        semA (x) stack_var stack_list
+        - semA (y) stack_var stack_list
+    | PowExpr (x, y) -> pow (semA (x) stack_var stack_list, semA (y) stack_var stack_list)
+    | UPlusExpr (x) -> semA (x) stack_var stack_list
+    | UMinusExpr (x) -> -semA (x) stack_var stack_list
 
-let rec semB e (stack: Map<string, int>) =
+let rec semB e (stack_var: Map<string, int>) (stack_list: Map<string, int list>) =
     match e with
     | T -> true
     | F -> false
     | UANDExpr (x, y) ->
-        if (semB (x) stack) then
-            (semB (x) stack && semB (y) stack)
+        if (semB (x) stack_var stack_list) then
+            (semB (x) stack_var stack_list
+             && semB (y) stack_var stack_list)
         else
             false
     | UORExpr (x, y) ->
-        if (semB (x) stack) then
+        if (semB (x) stack_var stack_list) then
             true
         else
-            (semB (x) stack || semB (y) stack)
-    | ANDExpr (x, y) -> semB (x) stack && semB (y) stack
-    | ORExpr (x, y) -> semB (x) stack || semB (y) stack
-    | NOTExpr (x) -> not (semB (x) stack)
-    | EQExpr (x, y) -> semA (x) stack = semA (y) stack
-    | NEQExpr (x, y) -> semA (x) stack <> semA (y) stack
-    | GTExpr (x, y) -> semA (x) stack > semA (y) stack
-    | GTEExpr (x, y) -> semA (x) stack >= semA (y) stack
-    | LTExpr (x, y) -> semA (x) stack < semA (y) stack
-    | LTEqExpr (x, y) -> semA (x) stack <= semA (y) stack
+            (semB (x) stack_var stack_list
+             || semB (y) stack_var stack_list)
+    | ANDExpr (x, y) ->
+        semB (x) stack_var stack_list
+        && semB (y) stack_var stack_list
+    | ORExpr (x, y) ->
+        semB (x) stack_var stack_list
+        || semB (y) stack_var stack_list
+    | NOTExpr (x) -> not (semB (x) stack_var stack_list)
+    | EQExpr (x, y) -> semA (x) stack_var stack_list = semA (y) stack_var stack_list
+    | NEQExpr (x, y) ->
+        semA (x) stack_var stack_list
+        <> semA (y) stack_var stack_list
+    | GTExpr (x, y) -> semA (x) stack_var stack_list > semA (y) stack_var stack_list
+    | GTEExpr (x, y) ->
+        semA (x) stack_var stack_list
+        >= semA (y) stack_var stack_list
+    | LTExpr (x, y) -> semA (x) stack_var stack_list < semA (y) stack_var stack_list
+    | LTEqExpr (x, y) ->
+        semA (x) stack_var stack_list
+        <= semA (y) stack_var stack_list
 
 
-let Sem act stack =
+let Sem act stack_var stack_list =
     match act with
     | B x ->
-        if (semB x stack) then
-            stack
+        if (semB x stack_var stack_list) then
+            (stack_var, stack_list)
         else
             failwith "stuck"
     | C x ->
         match x with
-        | Assign (x, y) -> stack.Add(x, semA y stack)
+        | Assign (x, y) ->
+            match stack_var.TryFind(x) with
+            | Some var -> (stack_var.Add(x, semA y stack_var stack_list), stack_list)
+            | None -> failwith "Variable not defined"
+        | AssignAt (x, y, z) ->
+            match stack_list.TryFind(x) with
+            | Some arr ->
+                try
+                    let indices = [ 0 .. (List.length arr - 1) ]
+
+                    let t =
+                        List.fold
+                            (fun acc (el, index) ->
+                                if index = (semA y stack_var stack_list) then
+                                    (semA z stack_var stack_list :: acc)
+                                else
+                                    el :: acc)
+                            []
+                            (List.zip arr indices)
+
+                    (stack_var, stack_list.Add(x, t))
+                with
+                | e -> failwith "Array  index out of bounds"
+            | None -> failwith "Vairable not defined"
+
+//  AssignAt
+
 //
 // Compile n programs
 let compile' () =
@@ -354,9 +413,9 @@ node [shape = circle]\n"
 
 
 
-let rec iterate PG node stack =
+let rec iterate PG node (stack_var, stack_list) =
     if node = "q◀" then
-        stack
+        (stack_var, stack_list, Success node)
     else
         let available =
             Set.fold
@@ -366,41 +425,61 @@ let rec iterate PG node stack =
                 []
                 PG
 
-        if (List.length available = 1) then // Deterministic
-            let (_, _, qf, act) = available.[0]
+        let res =
+            Set.toList (
+                List.fold
+                    (fun acc el ->
+                        match el with
+                        | (q0, _, qf, act) ->
+                            match act with
+                            | B x ->
+                                if (semB x stack_var stack_list = true) then
+                                    Set.add el acc
+                                else
+                                    acc
+                            | C x -> Set.add el acc)
+                    Set.empty
+                    available
+            )
 
-            iterate PG qf (Sem act stack)
+
+
+        if (List.length res = 1) then // Deterministic
+            let (_, _, qf, act) = res.[0]
+
+            try
+                iterate PG qf (Sem act stack_var stack_list)
+            with
+            | e -> (stack_var, stack_list, Stuck qf)
         else
-            failwith "Non-determinism"
-
-// let res =
-//     Set.toList (
-//         Set.fold
-//             (fun acc el ->
-//                 match el with
-//                 | (q0, _, qf, act) ->
-//                     match act with
-//                     | B x ->
-//                         if (semB x = true) then
-//                             Set.add el acc
-//                         else
-//                             acc
-//                     | Assign _ -> Set.add el acc
-//                     | SKIP -> Set.add el acc
-//                     | AssignArray _ -> Set.add el acc)
-//             Set.empty
-//             available
-//     )
+            (stack_var, stack_list, Stuck node)
 
 
-// let qf =
-//     match res with
-//     | (_, _, q, _) :: [] -> q
-//     | (_, _, q, _) :: xs -> failwith "err"
+let printMemVar (stack_var: Map<string, int>) =
+    Map.iter (fun k v -> printf "%s: %i\n" k v) stack_var
+// printfn t
 
-// ()
+let printMemList (stack_list: Map<string, int list>) =
+    Map.iter (fun k v -> printfn "%s: %s\n" k (List.fold (fun acc el -> acc + " " + (string el)) "" v)) stack_list
 
-// // q▷
+let execute () =
+    let (stack_var, stack_list, state) =
+        iterate (get_edges (compile' ()) false) "q▷" (stack_var, stack_list)
+
+    match state with
+    | Success node ->
+        printfn "Status: Terminated"
+        printfn "Node: %s" (node)
+        printMemVar (stack_var)
+        printMemList (stack_list)
+
+    | Stuck node ->
+        printfn "Status: Stuck"
+        printfn "Node: %s" (node)
+        printMemVar (stack_var)
+        printMemList (stack_list)
+
+
 
 
 let menu () =
@@ -427,7 +506,9 @@ let rec main () =
         | err ->
             printfn "Compilation error"
             main ()
-    // | "3" -> execute (get_edges (compile' ()) false) "q▷" stack // CHANGFE
+    | "3" ->
+        execute ()
+        main ()
     | "q" -> ()
     | _ ->
         printfn "Please choose a correct option."
