@@ -38,6 +38,8 @@ type command =
     | If of gCommand
     | Do of gCommand
     | Compose of (command * command)
+    | ComposeMem of (command * command)
+    | AssignList of (string * string)
 
 and gCommand =
     | ExecuteIf of (bexpr * command)

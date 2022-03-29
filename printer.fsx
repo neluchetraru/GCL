@@ -11,6 +11,10 @@ open GCLTypesAST
 open GCLParser
 #load "GCLLexer.fs"
 open GCLLexer
+// #load "MemoryParser.fs"
+// open MemoryParser
+// #load "MemoryLexer.fs"
+// open MemoryLexer
 
 type Act =
     | B of bexpr
@@ -23,6 +27,14 @@ let parse input =
     let res = GCLParser.start GCLLexer.tokenize lexbuf
     res
 
+// let parseMem input =
+//     let lexbuf = LexBuffer<char>.FromString input
+
+//     let res =
+//         MemoryParser.start MemoryLexer.tokenize lexbuf
+
+//     res
+
 let rec pow (a, b) =
     match b with
     | b when b = 0 -> 1
@@ -31,7 +43,7 @@ let rec pow (a, b) =
 
 let convert edge =
     match edge with
-    | (node_in, label, node_out, act) ->
+    | (node_in, label, node_out, act, l) ->
         node_in
         + " -> "
         + node_out
@@ -176,11 +188,14 @@ let rec beautifyCommand =
 
 // create graph
 
+
+type loop = Loop of bool
+
 let rec edges initial final i =
     function
-    | Assign (x, y) as c -> (Set.singleton ((initial, beautifyCommand c, final, C c)), i)
-    | AssignAt (x, y, z) as c -> (Set.singleton ((initial, beautifyCommand c, final, C c)), i)
-    | Skip as c -> (Set.singleton ((initial, beautifyCommand c, final, C c)), i)
+    | Assign (x, y) as c -> (Set.singleton ((initial, beautifyCommand c, final, C c, Loop(false))), i)
+    | AssignAt (x, y, z) as c -> (Set.singleton ((initial, beautifyCommand c, final, C c, Loop(false))), i)
+    | Skip as c -> (Set.singleton ((initial, beautifyCommand c, final, C c, Loop(false))), i)
     | Compose (x, y) ->
         let new_q = "q" + string (i)
         let E1, last = edges initial new_q (i + 1) x
@@ -191,7 +206,7 @@ let rec edges initial final i =
     | Do x ->
         let b = beautifyBExpr (doneGC x)
         let E, last = edges_GC initial initial (i) x
-        (Set.add (initial, b, final, B(doneGC x)) E, last)
+        (Set.add (initial, b, final, B(doneGC x), Loop(true)) E, last)
 
 and edges_GC initial final i =
     function
@@ -202,15 +217,15 @@ and edges_GC initial final i =
     | ExecuteIf (x, y) ->
         let new_q = "q" + string (i)
         let E, last = edges new_q final (i + 1) y
-        (Set.add (initial, beautifyBExpr x, new_q, B x) E, last)
+        (Set.add (initial, beautifyBExpr x, new_q, B x, Loop(false)) E, last)
 
 
 
 let rec edges_d initial final i command =
     match command with
-    | Assign (x, y) as c -> (Set.singleton ((initial, beautifyCommand c, final, C c)), i)
-    | AssignAt (x, y, z) as c -> (Set.singleton ((initial, beautifyCommand c, final, C c)), i)
-    | Skip as c -> (Set.singleton ((initial, beautifyCommand c, final, C c)), i)
+    | Assign (x, y) as c -> (Set.singleton ((initial, beautifyCommand c, final, C c, Loop(false))), i)
+    | AssignAt (x, y, z) as c -> (Set.singleton ((initial, beautifyCommand c, final, C c, Loop(false))), i)
+    | Skip as c -> (Set.singleton ((initial, beautifyCommand c, final, C c, Loop(false))), i)
     | Compose (x, y) ->
         let new_q = "q" + string (i)
         let E1, last = edges_d initial new_q (i + 1) x
@@ -221,7 +236,7 @@ let rec edges_d initial final i command =
         (E, last)
     | Do x ->
         let (E, d, last) = edges_GC_d initial initial i x F
-        (Set.add (initial, beautifyBExpr (NOTExpr(d)), final, B(NOTExpr(d))) E, last)
+        (Set.add (initial, beautifyBExpr (NOTExpr(d)), final, B(NOTExpr(d)), Loop(true)) E, last)
 
 
 and edges_GC_d initial final i command d =
@@ -232,7 +247,9 @@ and edges_GC_d initial final i command d =
 
         (Set.fold
             (fun acc el -> Set.add el acc)
-            (Set.singleton ((initial, beautifyBExpr (UANDExpr(x, NOTExpr(d))), new_q, B((UANDExpr(x, NOTExpr(d)))))))
+            (Set.singleton (
+                (initial, beautifyBExpr (UANDExpr(x, NOTExpr(d))), new_q, B((UANDExpr(x, NOTExpr(d)))), Loop(false))
+            ))
             E,
          (UORExpr(x, d)),
          last)
@@ -248,6 +265,7 @@ and edges_GC_d initial final i command d =
 let stack_var = Map.empty.Add("x", 10).Add("y", 0)
 
 let stack_list = Map.empty
+// "1,32,43" -> [1,32,43]
 
 type State =
     | Stuck of string
@@ -421,7 +439,7 @@ let rec iterate PG node (stack_var, stack_list) =
             Set.fold
                 (fun acc el ->
                     match el with
-                    | (q0, _, qf, act) -> if q0 = node then el :: acc else acc)
+                    | (q0, _, qf, act, l) -> if q0 = node then el :: acc else acc)
                 []
                 PG
 
@@ -430,7 +448,7 @@ let rec iterate PG node (stack_var, stack_list) =
                 List.fold
                     (fun acc el ->
                         match el with
-                        | (q0, _, qf, act) ->
+                        | (q0, _, qf, act, l) ->
                             match act with
                             | B x ->
                                 if (semB x stack_var stack_list = true) then
@@ -445,7 +463,7 @@ let rec iterate PG node (stack_var, stack_list) =
 
 
         if (List.length res = 1) then // Deterministic
-            let (_, _, qf, act) = res.[0]
+            let (_, _, qf, act, l) = res.[0]
 
             try
                 iterate PG qf (Sem act stack_var stack_list)
@@ -480,6 +498,54 @@ let execute () =
         printMemList (stack_list)
 
 
+let rec get_coverage edges res =
+    match edges with
+    | [] -> res
+    | (q0, _, _, _, s) :: xs ->
+        match s with
+        | Loop true -> get_coverage xs (Set.add q0 res)
+        | Loop false -> get_coverage xs res
+
+
+let EDGES_END_IN_INIT init edges =
+    Set.fold
+        (fun acc ((_, _, qf, _, _) as edge) ->
+            if qf = init then
+                Set.add edge acc
+            else
+                acc)
+        Set.empty
+        edges
+
+
+let rec build init dict final edges cov =
+    let edges_end_in_init =
+        Set.toList (EDGES_END_IN_INIT init edges)
+
+    build_help init dict final cov edges edges_end_in_init
+
+and build_help init dict final cov edges =
+    function
+    | (q, act, qf, _, _) :: tail ->
+
+
+        if Set.exists (fun x -> x = q) cov then
+            Set.add (q, act + " " + dict, final) (build_help init dict final cov edges tail)
+        else
+            Set.fold
+                (fun acc el -> Set.add el acc)
+                (build_help init dict final cov edges tail)
+                (build q (act + " " + dict) final edges cov)
+    | [] -> Set.empty
+
+let rec spf coverage edges =
+    let S =
+        Set.fold (fun acc x -> Set.union (build x "" x edges coverage) acc) Set.empty coverage
+
+    S
+
+let beautifySPF spf =
+    Set.fold (fun acc (q0, act, qf) -> acc + (q0 + " " + act + " " + qf + "\n")) "" spf
 
 
 let menu () =
@@ -487,9 +553,36 @@ let menu () =
     Console.WriteLine("[1] Parse a GCL program")
     Console.WriteLine("[2] Compile a GCL program into a PG")
     Console.WriteLine("[3] Execute a program")
+    Console.WriteLine("[4] Program verification")
     Console.WriteLine("[q] Quit")
     let choice = Console.ReadLine()
     choice
+
+let rec programVerif c =
+    Console.WriteLine("Choose a option:")
+    Console.WriteLine("[1] Get Covering Nodes")
+    Console.WriteLine("[2] Partial Predicate Assignment")
+    Console.WriteLine("[3] Show Proof Obligations")
+    Console.WriteLine("[4] Go back")
+
+    let cov =
+        (get_coverage (Set.toList (get_edges c false)) (Set.empty.Add("q▷")))
+            .Add("q◀")
+
+    let choice = Console.ReadLine()
+
+    match choice with
+    | "1" ->
+        Console.WriteLine(Set.fold (fun acc x -> acc  + x + "\n") "" cov)
+        programVerif c
+    | "2" ->
+        Console.WriteLine(beautifySPF (spf cov (get_edges c false)))
+        programVerif c
+    | "3" ->
+        Console.WriteLine(beautifySPF (spf cov (get_edges c false)))
+        programVerif c
+    | "4" -> ()
+    | _ -> programVerif c
 
 let rec main () =
     let option = menu ()
@@ -509,9 +602,17 @@ let rec main () =
     | "3" ->
         execute ()
         main ()
+
+    | "4" ->
+        let c = compile' ()
+        programVerif c
+        main ()
     | "q" -> ()
     | _ ->
         printfn "Please choose a correct option."
         main ()
 
 main ()
+
+
+//q(start, final) and loops are covering nodes

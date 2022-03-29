@@ -42,6 +42,6 @@ rule tokenize = parse
     | "<="          { LTE }
     | "false"        { FF } 
     | "true"           { TT }
-    | ":="          { ASSGN }
+    | "="          { ASSGN }
     | ","           { COMMA }
     

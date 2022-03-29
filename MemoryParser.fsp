@@ -4,12 +4,11 @@ open GCLTypesAST
 
 %token <int> NUM
 %token <string> VARNAME
-%token ASSGN TIMES DIV PLUS MINUS POW LPAR RPAR SRB SLB TT FF UAND UOR AND OR NOT EQ NEQ GT GTE LT LTE EOF 
+%token ASSGN TIMES DIV PLUS MINUS POW LPAR RPAR SRB SLB TT FF UAND UOR AND OR NOT EQ NEQ GT GTE LT LTE EOF COMMA
 
 // Figure out associativity
 %left TIMES DIV PLUS MINUS UAND UOR AND OR
-%right POW NOT 
-
+%right POW NOT COMMA
 %start start
 
 // We specify the return type of each of then non-terminal symbols
@@ -56,9 +55,11 @@ b:
 
 // command parser rules
 C: 
-    | VARNAME ASSGN a { ASSIGN($1,$3) }
-    | VARNAME SLB a SRB ASSGN a { ArrayAT($1,$3,$6) } // A[a]:=a
-    | VARNAME ASSGN SLB  SRB{} |    {}
+    | C COMMA C { ComposeMem($1,$3) }
+    | VARNAME ASSGN a { Assign($1,$3) }
+    | VARNAME SLB a SRB ASSGN a { AssignAt($1,$3,$6) } 
+    | VARNAME ASSGN SLB a SRB { AssignList($1,$4) }
+
 %%
 
 // 
