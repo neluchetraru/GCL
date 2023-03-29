@@ -262,9 +262,15 @@ and edges_GC_d initial final i command d =
 
 
 // Semantics
-let stack_var = Map.empty.Add("x", 10).Add("y", 0)
+let stack_var =
+    Map
+        .empty
+        .Add("i", 0)
+        .Add("n", 10)
+        .Add("t", 0)
+        .Add("j", 0)
 
-let stack_list = Map.empty
+let stack_list = Map.empty.Add("A", [ 54; 32; 1 ])
 // "1,32,43" -> [1,32,43]
 
 type State =
@@ -573,7 +579,7 @@ let rec programVerif c =
 
     match choice with
     | "1" ->
-        Console.WriteLine(Set.fold (fun acc x -> acc  + x + "\n") "" cov)
+        Console.WriteLine(Set.fold (fun acc x -> acc + x + "\n") "" cov)
         programVerif c
     | "2" ->
         Console.WriteLine(beautifySPF (spf cov (get_edges c false)))
